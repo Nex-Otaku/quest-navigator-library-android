@@ -326,10 +326,11 @@ public class QspLib extends Plugin {
 
 	private void errorResult(JSONArray args, String callbackId)
 	{
-		//STUB
 		// Контекст UI
     	Utility.WriteLog("[[errorResult]]");
         dialogHasResult = true;
+		Utility.WriteLog("errorResult: OK clicked, unparking library thread");
+    	setThreadUnpark();
 	}
 
 	private void loadGame(JSONArray args, String callbackId)
@@ -467,7 +468,6 @@ public class QspLib extends Plugin {
 
 	private void jsQspError(JSONObject error)
 	{
-		//STUB - пока что оставлю "нативный" диалог
 		// Контекст UI
 		jsCallApi("jsQspError", "qspError", error, JSON_OBJECT);
     }
@@ -900,21 +900,57 @@ public class QspLib extends Plugin {
     	//Контекст библиотеки
     	if (!successfull)
     	{
+        	//Контекст библиотеки
     		Utility.WriteLog(failMsg + " failed");
-			ContainerJniResult error = (ContainerJniResult) QSPGetLastErrorData();
+
+    		ContainerJniResult error = (ContainerJniResult) QSPGetLastErrorData();
 			error.str2 = QSPGetErrorDesc(error.int1);
-	    	String locName = (error.str1 == null) ? "" : error.str1;
-	    	String errDesc = (error.str2 == null) ? "" : error.str2;
-	    	final String message = "Локация: " + locName + "\n" +
-		    	"Действие: " + String.valueOf(error.int2) + "\n" +
-		    	"Строка: " + String.valueOf(error.int3) + "\n" +
-		    	"Номер ошибки: " + String.valueOf(error.int1) + "\n" +
-		    	"Описание: " + errDesc;
+	    	String locName = skin.applyHtmlFixes((error.str1 == null) ? "" : error.str1);
+	    	String errDesc = skin.applyHtmlFixes((error.str2 == null) ? "" : error.str2);
+
+    		if (libThread==null)
+    		{
+    			Utility.WriteLog("CheckQspResult: failed, libThread is null");
+    			return;
+    		}
+
+    	    // Обновляем скин
+            skin.updateBaseVars();
+            skin.updateMsgDialog();
+            skin.updateEffects();
+    	    // Если что-то изменилось, то передаем в яваскрипт
+    	    if (skin.isSomethingChanged() && (skin.disableAutoRef != 1))
+    	    {
+    	        Utility.WriteLog("Hey! Skin was changed! Updating it before showing error dialog.");
+    	        RefreshInt(QSP_TRUE);
+    	    }
+    		
+    		dialogHasResult = false;
+    		
+        	final JSONObject jsErrorContainer = new JSONObject();
+        	try {
+	                jsErrorContainer.put("desc", errDesc);
+	                jsErrorContainer.put("loc", locName);
+	                jsErrorContainer.put("actIndex", error.int2);
+	                jsErrorContainer.put("line", error.int3);
+			} catch (JSONException e) {
+	    		Utility.WriteLog("ERROR - jsErrorContainer in CheckQspResult!");
+				e.printStackTrace();
+			}
+    		
     		mainActivity.runOnUiThread(new Runnable() {
     			public void run() {
-	        		Utility.ShowError(uiContext, message);
+    				jsQspError(jsErrorContainer);
+    				Utility.WriteLog("CheckQspResult(UI): error dialog showed");
     			}
     		});
+        	
+    		Utility.WriteLog("CheckQspResult: parking library thread");
+            while (!dialogHasResult) {
+            	setThreadPark();
+            }
+            parkThread = null;
+    		Utility.WriteLog("CheckQspResult: library thread unparked, finishing");
     	}
 	}
 	

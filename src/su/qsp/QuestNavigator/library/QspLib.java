@@ -1,6 +1,9 @@
 package su.qsp.QuestNavigator.library;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -24,6 +27,7 @@ import android.content.res.AssetManager;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Menu;
 
 import su.qsp.QuestNavigator.library.Utility;
 
@@ -47,7 +51,9 @@ public class QspLib extends Plugin {
     public static final int JSON_STRING = 0;
     public static final int JSON_ARRAY = 1;
     public static final int JSON_OBJECT = 2;
-	
+
+    public static final int SLOTS_MAX = 5;
+    
 	public PluginResult execute(String action, JSONArray args, String callbackId) {
 		// Контекст UI
 	    PluginResult.Status status = PluginResult.Status.OK;
@@ -160,6 +166,7 @@ public class QspLib extends Plugin {
 	    waitingForJS = false;
 		
 		curGameFile = "www/standalone_content/game.qsp";
+		curSaveDir = mainActivity.getFilesDir().getPath().concat(File.separator);
 
         //Создаем список для звуков и музыки
         mediaPlayersList = new Vector<ContainerMusic>();
@@ -338,6 +345,11 @@ public class QspLib extends Plugin {
 		//STUB
 		// Контекст UI
     	Utility.WriteLog("[[loadGame]]");
+        // Останавливаем таймер
+	    timerHandler.removeCallbacks(timerUpdateTask);
+        // Загружаем список файлов и отдаем в яваскрипт
+    	JSONObject slots = getSaveSlots(true);
+    	jsShowSaveSlotsDialog(slots);
 	}
 
 	private void saveGame(JSONArray args, String callbackId)
@@ -345,6 +357,11 @@ public class QspLib extends Plugin {
 		//STUB
 		// Контекст UI
     	Utility.WriteLog("[[saveGame]]");
+        // Останавливаем таймер
+	    timerHandler.removeCallbacks(timerUpdateTask);
+	    // Загружаем список файлов и отдаем в яваскрипт
+    	JSONObject slots = getSaveSlots(false);
+    	jsShowSaveSlotsDialog(slots);
 	}
 
 	private void saveSlotSelected(JSONArray args, String callbackId)
@@ -353,6 +370,29 @@ public class QspLib extends Plugin {
 		// Контекст UI
     	Utility.WriteLog("[[saveSlotSelected]]");
         waitingForJS = false;
+
+        int index = -1;
+        int mode = -1;
+		try {
+	    	index = args.getInt(0); // Номер слота
+	    	mode = args.getInt(1); // 1 - open, 0 - save
+		} catch (JSONException e) {
+    		Utility.WriteLog("ERROR - args in saveSlotSelected!");
+			e.printStackTrace();
+			return;
+		}
+        
+        if (index == -1)
+        {
+	        // Запускаем таймер
+	        timerHandler.postDelayed(timerUpdateTask, timerInterval);
+	        return;
+        }
+        
+        if (mode == 1)
+        	LoadSlot(index);
+        else
+        	SaveSlot(index);
 	}
 
 	private void setMute(JSONArray args, String callbackId)
@@ -1121,6 +1161,169 @@ public class QspLib extends Plugin {
         });
     }
     
+    private JSONObject getSaveSlots(boolean open)
+    {
+    	//Контекст UI
+    	JSONArray jsSlots = new JSONArray();
+		for (int i=0; i<SLOTS_MAX; i++)
+		{
+			String title;
+			String Slotname = String.valueOf(i + 1).concat(".sav");
+			File checkSlot = new File(curSaveDir.concat(Slotname));
+			if (checkSlot.exists())
+				title = String.valueOf(i + 1);
+			else
+				title = "-empty-";
+			try {
+				jsSlots.put(i, title);
+			} catch (JSONException e) {
+	    		Utility.WriteLog("ERROR - jsSlots[] in getSaveSlots!");
+				e.printStackTrace();
+			}
+		}
+    	
+    	JSONObject jsSlotsContainer = new JSONObject();
+    	try {
+    		jsSlotsContainer.put("open", open ? 1 : 0);
+    		jsSlotsContainer.put("slots", jsSlots);
+		} catch (JSONException e) {
+    		Utility.WriteLog("ERROR - jsSlotsContainer in getSaveSlots!");
+			e.printStackTrace();
+		}
+    	return jsSlotsContainer;
+    }
+    
+    private void LoadSlot(int index)
+    {
+    	//Контекст UI
+    	String path = curSaveDir.concat(String.valueOf(index)).concat(".sav");
+    	File f = new File(path);
+    	if (!f.exists())
+    	{
+    		Utility.WriteLog("LoadSlot: failed, file not found");
+    		return;
+    	}
+
+        FileInputStream fIn = null;
+        int size = 0;
+		try {
+			fIn = new FileInputStream(f);
+		} catch (FileNotFoundException e) {
+        	Utility.ShowError(uiContext, "Не удалось открыть файл");
+        	e.printStackTrace();
+    		return;
+		}
+		try {
+			size = fIn.available();
+		} catch (IOException e) {
+        	Utility.ShowError(uiContext, "Не удалось получить доступ к файлу");
+			e.printStackTrace();
+			try {
+				fIn.close();
+			} catch (IOException e1) {
+	        	Utility.ShowError(uiContext, "Не удалось освободить дескриптор файла");
+				e1.printStackTrace();
+			}
+    		return;
+		}
+        
+		final byte[] inputBuffer = new byte[size];		
+		try {
+			fIn.read(inputBuffer);
+			fIn.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+    		return;
+		}
+		final int bufferSize = size;
+
+	    //Выключаем музыку
+	    CloseFileUI(null);
+	    
+		libThreadHandler.post(new Runnable() {
+			public void run() {
+	    		if (libraryThreadIsRunning)
+	    		{
+	        		Utility.WriteLog("LoadSlot: failed, library is already running");
+	    			return;
+	    		}
+            	libraryThreadIsRunning = true;
+            	
+            	boolean result = QSPOpenSavedGameFromData(inputBuffer, bufferSize, true);
+				CheckQspResult(result, "LoadSlot: QSPOpenSavedGameFromData");
+            	
+        		libraryThreadIsRunning = false;
+
+        		if (!result)
+	    		{
+	        		Utility.WriteLog("LoadSlot: failed, cannot load data from byte buffer");
+	    			return;
+	    		}
+
+        		mainActivity.runOnUiThread(new Runnable() {
+	    			public void run() {
+	    	    		//Запускаем таймер
+	    	            timerHandler.postDelayed(timerUpdateTask, timerInterval);
+	    			}
+    	    	});
+			}
+		});
+    }
+    
+    private void SaveSlot(int index)
+    {
+    	//Контекст UI
+    	final String path = curSaveDir.concat(String.valueOf(index)).concat(".sav");
+
+		libThreadHandler.post(new Runnable() {
+			public void run() {
+	    		if (libraryThreadIsRunning)
+	    		{
+	        		Utility.WriteLog("SaveSlot: failed, library is already running");
+	    			return;
+	    		}
+            	libraryThreadIsRunning = true;
+            	
+	    		final String saveFilePath = path;
+	        	final byte[] dataToSave = QSPSaveGameAsData(false);
+	        	
+	        	if (dataToSave == null)
+	    		{
+					CheckQspResult(false, "SaveSlot: QSPSaveGameAsData");
+	        		Utility.WriteLog("SaveSlot: failed, cannot create save data");
+	    			return;
+	    		}
+	    		
+	        	mainActivity.runOnUiThread(new Runnable() {
+	    			public void run() {
+	    				
+	    		    	File f = new File(saveFilePath);
+	    				
+	            		FileOutputStream fileOutput = null;
+						try {
+							fileOutput = new FileOutputStream(f);
+						} catch (FileNotFoundException e) {
+							e.printStackTrace();
+							return;
+						}
+            			try {
+							fileOutput.write(dataToSave, 0, dataToSave.length);
+							fileOutput.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+							return;
+						}
+	    				
+	    	    		//Запускаем таймер
+	    	            timerHandler.postDelayed(timerUpdateTask, timerInterval);
+	    			}
+    	    	});
+            	
+        		libraryThreadIsRunning = false;
+			}
+		});
+    }
+    
     private void PlayFileUI(String file, int volume)
     {
     	//Контекст UI
@@ -1427,6 +1630,7 @@ public class QspLib extends Plugin {
     
     String 					curGameDir;
     String					curGameFile;
+    String					curSaveDir;
     Vector<ContainerMusic>	mediaPlayersList;
     Handler					timerHandler;
 	long					timerStartTime;

@@ -918,6 +918,8 @@ public class QspSkin {
 	public String applyHtmlFixes(String text)
 	{
 	    // Контекст библиотеки
+		if (text == null)
+			return "";
 	    if (useHtml != 0)
 	    {
 	        text = text.replaceAll("\n", "<br />");

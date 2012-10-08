@@ -159,7 +159,6 @@ public class QspLib extends Plugin {
 
 		gameIsRunning = false;
 		qspInited = false;
-		waitForImageBox = false;
 		muted = false;
 		
 	    // Устанавливаем флаг, который означает, что мы ждем ответа от JS диалога(на данный момент - только диалог слотов сохранений)
@@ -342,7 +341,6 @@ public class QspLib extends Plugin {
 
 	private void loadGame(JSONArray args, String callbackId)
 	{
-		//STUB
 		// Контекст UI
     	Utility.WriteLog("[[loadGame]]");
         // Останавливаем таймер
@@ -354,7 +352,6 @@ public class QspLib extends Plugin {
 
 	private void saveGame(JSONArray args, String callbackId)
 	{
-		//STUB
 		// Контекст UI
     	Utility.WriteLog("[[saveGame]]");
         // Останавливаем таймер
@@ -366,7 +363,6 @@ public class QspLib extends Plugin {
 
 	private void saveSlotSelected(JSONArray args, String callbackId)
 	{
-		//STUB
 		// Контекст UI
     	Utility.WriteLog("[[saveSlotSelected]]");
         waitingForJS = false;
@@ -514,7 +510,6 @@ public class QspLib extends Plugin {
 
 	private void jsShowSaveSlotsDialog(JSONObject slots)
 	{
-		//STUB
 		// Контекст UI
 		jsCallApi("jsShowSaveSlotsDialog", "qspShowSaveSlotsDialog", slots, JSON_OBJECT);
     }
@@ -734,32 +729,26 @@ public class QspLib extends Plugin {
     private void ShowPicture(String file)
     {
     	//Контекст библиотеки
-    	if (file == null || file.length() == 0)
-    		return;
+    	if (file == null)
+    		file = "";
     	
     	final String fileName = Utility.QspPathTranslate(file);
     	
 		mainActivity.runOnUiThread(new Runnable() {
 			public void run() {
-		    	String prefix = "";
-		    	if (curGameDir != null)
-		    		prefix = curGameDir;
-		    	
-		    	//Проверяем, существует ли файл.
-		    	//Если нет - выходим
-		        if (!Utility.CheckAssetExists(uiContext, prefix.concat(fileName), "ShowPicture"))
-		        	return;
-		        
-		        waitForImageBox = true;
-		
-		        /*
-		    	Intent imageboxIntent = new Intent();
-		    	imageboxIntent.setClassName("com.qsp.player", "com.qsp.player.QspImageBox");
-		    	Bundle b = new Bundle();
-		    	b.putString("imageboxFile", prefix.concat(fileName));
-		    	imageboxIntent.putExtras(b);
-		    	startActivity(imageboxIntent);
-		    	*/
+				if (fileName.length() > 0)
+				{
+			    	String prefix = "";
+			    	if (curGameDir != null)
+			    		prefix = curGameDir;
+			    	
+			    	//Проверяем, существует ли файл.
+			    	//Если нет - выходим
+			        if (!Utility.CheckAssetExists(uiContext, prefix.concat(fileName), "ShowPicture"))
+			        	return;
+				}
+		        // "Пустое" имя файла тоже имеет значение - так мы скрываем картинку
+		        jsQspView(fileName);
 			}
 		});    	    	
     }
@@ -1638,7 +1627,6 @@ public class QspLib extends Plugin {
 	int						timerInterval;
 	boolean					gameIsRunning;
 	boolean					qspInited;
-	boolean					waitForImageBox;
 	Vector<ContainerMenuItem>		menuList;
     
     

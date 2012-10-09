@@ -23,11 +23,11 @@ import org.json.JSONObject;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.Menu;
 
 import su.qsp.QuestNavigator.library.Utility;
 
@@ -393,38 +393,34 @@ public class QspLib extends Plugin {
 
 	private void setMute(JSONArray args, String callbackId)
 	{
-		//STUB
 		// Контекст UI
     	Utility.WriteLog("[[setMute]]");
     	
-    	/*
-    // Контекст библиотеки
-    muted = [(NSNumber*)mute boolValue];
-    NSEnumerator *enumerator = [playList keyEnumerator];
-    id key;
-    while ((key = [enumerator nextObject]))
-    {
-        QspAudioPlayer* player = (QspAudioPlayer*)[playList objectForKey:key];
-        [player setVolume: muted ? 0.0 : player.initialVolume];
-    }
-    	 */
+		try {
+	    	muted = args.getBoolean(0); // true - выключаем звук, false - включаем
+		} catch (JSONException e) {
+    		Utility.WriteLog("ERROR - args in setMute!");
+			e.printStackTrace();
+			return;
+		}
+    	
+        musicLock.lock();
+        try {
+	    	for (int i=0; i<mediaPlayersList.size(); i++)
+	    	{
+	    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
+				float realVolume = GetRealVolume(it.volume);
+				it.player.setVolume(realVolume, realVolume);
+	    	}
+	    } finally {
+	    	musicLock.unlock();
+	    }
 	}
 
 	/*
 	 * 		Обертки яваскриптовых функций
 	 */
 	
-	/*
-		JSONObject contentJS = new JSONObject();
-		try {
-			contentJS.put("name", name);
-			contentJS.put("phone", number);
-			contentJS.put("email", email);
-		} catch (JSONException e) {
-    		Utility.WriteLog("ERROR - contentJS in jsSetGroupedContent!");
-			e.printStackTrace();
-		}
-	 */
 	private void jsInitNext()
 	{
 		// Контекст UI
@@ -485,7 +481,6 @@ public class QspLib extends Plugin {
 
 	private void jsQspView(String path)
 	{
-		//STUB
 		// Контекст UI
 		jsCallApi("jsQspView", "qspView", path, JSON_STRING);
     }
@@ -584,7 +579,6 @@ public class QspLib extends Plugin {
             for (int i = 0; i < nObjsCount; i++)
             {
 	        	ContainerJniResult objsResult = (ContainerJniResult) QSPGetObjectData(i);
-                //QSPGetObjectData(i, &imgPath, &desc);
                 
 				JSONObject obj = new JSONObject();
 				try {
@@ -712,7 +706,7 @@ public class QspLib extends Plugin {
     private boolean IsPlayingFile(String file)
     {
     	//Контекст библиотеки
-    	return IsPlayingFileUI(Utility.QspPathTranslate(file));
+    	return IsPlayingFileUI(Utility.QspPathTranslate(file), false, 0);
     }
 
     private void CloseFile(String file)
@@ -1321,18 +1315,39 @@ public class QspLib extends Plugin {
     	
     	//Проверяем, проигрывается ли уже этот файл.
     	//Если проигрывается, ничего не делаем.
-    	if (IsPlayingFileUI(file))
+    	if (IsPlayingFileUI(file, true, volume))
     		return;
 
-		//Проверяем, существует ли файл.
+    	// Добавляем к имени файла полный путь
+    	String prefix = "";
+    	if (curGameDir != null)
+    		prefix = curGameDir;
+    	String assetFilePath = prefix.concat(file);
+
+    	//Проверяем, существует ли файл.
 		//Если нет, ничего не делаем.
-		File mediaFile = new File(curGameDir, file);
-        if (!mediaFile.exists())
+        if (!Utility.CheckAssetExists(uiContext, assetFilePath, "PlayFileUI"))
         	return;
-    	
+
+    	AssetManager assetManager = uiContext.getAssets();
+    	if (assetManager == null)
+    	{
+    		Utility.WriteLog("PlayFileUI: failed, assetManager is null");
+    		return;
+    	}
+    	AssetFileDescriptor afd = null;
+    	try {
+			afd = assetManager.openFd(assetFilePath);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+    	if (afd == null)
+    		return;
+        
     	MediaPlayer mediaPlayer = new MediaPlayer();
 	    try {
-			mediaPlayer.setDataSource(curGameDir + file);
+			mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 			return;
@@ -1399,7 +1414,7 @@ public class QspLib extends Plugin {
     	return result;
     }
 
-    private boolean IsPlayingFileUI(String file)
+    private boolean IsPlayingFileUI(String file, boolean setVolume, int volume)
     {
     	//Контекст UI
     	if (file == null || file.length() == 0)
@@ -1412,6 +1427,12 @@ public class QspLib extends Plugin {
 	    		ContainerMusic it = mediaPlayersList.elementAt(i);
 	    		if (it.path.equals(file))
 	    		{
+	    			if (setVolume)
+	    			{
+	    				it.volume = volume;
+	    				float realVolume = GetRealVolume(volume);
+	    				it.player.setVolume(realVolume, realVolume);
+	    			}
 	    			foundPlaying = true;
 	    			break;
 	    		}
@@ -1441,10 +1462,15 @@ public class QspLib extends Plugin {
 	    			if (it.player.isPlaying())
 	    				it.player.stop();
 	    			it.player.release();
-	    			mediaPlayersList.remove(it);
-	    			break;
+	    			if (!bCloseAll)
+	    			{
+	    				mediaPlayersList.remove(it);
+	    				break;
+	    			}
 	    		}
 	    	}
+    		if (bCloseAll)
+    			mediaPlayersList.clear();
         } finally {
         	musicLock.unlock();
         }
@@ -1452,6 +1478,11 @@ public class QspLib extends Plugin {
     
     private void PauseMusic(boolean pause)
     {
+    	// STUB
+    	
+    	// Реализовать обработчики событий PAUSE-RESUME для плагина,
+    	// в обработчиках вызывать эту функцию!
+    	
     	//Контекст UI
     	//pause == true : приостанавливаем
     	//pause == false : запускаем
@@ -1647,19 +1678,19 @@ public class QspLib extends Plugin {
     public native Object 	QSPGetExprValue();//!!!STUB
     public native void 		QSPSetInputStrText(String val);
     public native int 		QSPGetActionsCount();
-    public native Object 	QSPGetActionData(int ind);//!!!STUB
+    public native Object 	QSPGetActionData(int ind);
     public native boolean 	QSPExecuteSelActionCode(boolean isRefresh);
     public native boolean 	QSPSetSelActionIndex(int ind, boolean isRefresh);
     public native int 		QSPGetSelActionIndex();
     public native boolean 	QSPIsActionsChanged();
     public native int 		QSPGetObjectsCount();
-    public native Object 	QSPGetObjectData(int ind);//!!!STUB
+    public native Object 	QSPGetObjectData(int ind);
     public native boolean 	QSPSetSelObjectIndex(int ind, boolean isRefresh);
     public native int 		QSPGetSelObjectIndex();
     public native boolean 	QSPIsObjectsChanged();
     public native void 		QSPShowWindow(int type, boolean isShow);
-    public native Object 	QSPGetVarValuesCount(String name);
-    public native Object 	QSPGetVarValues(String name, int ind, int numVal, String strVal);//!!!STUB
+    public native Object 	QSPGetVarValuesCount(String name);//!!!STUB
+    public native Object 	QSPGetVarValues(String name, int ind, int numVal, String strVal);
     public native int 		QSPGetMaxVarsCount();
     public native Object 	QSPGetVarNameByIndex(int index);//!!!STUB
     public native boolean 	QSPExecString(String s, boolean isRefresh);

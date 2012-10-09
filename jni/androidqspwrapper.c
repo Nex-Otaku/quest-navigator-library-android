@@ -104,7 +104,6 @@ jstring Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVarsDesc(JNIEnv * env, j
 	return result;
 }
 ///* Возможность изменения текста дополнительного описания */
-//QSP_BOOL QSPIsVarsDescChanged()
 jboolean Java_su_qsp_QuestNavigator_library_QspLib_QSPIsVarsDescChanged(JNIEnv * env, jobject this)
 {
 	return QSPIsVarsDescChanged();
@@ -157,7 +156,6 @@ jint Java_su_qsp_QuestNavigator_library_QspLib_QSPGetActionsCount(JNIEnv * env, 
 	return QSPGetActionsCount();
 }
 ///* Данные действия с указанным индексом */
-//void QSPGetActionData(int ind, QSP_CHAR **image, QSP_CHAR **desc)
 jobject Java_su_qsp_QuestNavigator_library_QspLib_QSPGetActionData(JNIEnv * env, jobject this, jint ind)
 {
 	char * qspImgFileName;
@@ -215,7 +213,6 @@ jint Java_su_qsp_QuestNavigator_library_QspLib_QSPGetObjectsCount(JNIEnv * env, 
 	return QSPGetObjectsCount();
 }
 ///* Данные объекта с указанным индексом */
-//void QSPGetObjectData(int ind, QSP_CHAR **image, QSP_CHAR **desc)
 jobject Java_su_qsp_QuestNavigator_library_QspLib_QSPGetObjectData(JNIEnv * env, jobject this, jint ind)
 {
 	char * qspImgFileName;
@@ -288,7 +285,6 @@ jobject Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVarValuesCount(JNIEnv * 
 	return NULL;
 }
 ///* Получить значения указанного элемента массива */
-//QSP_BOOL QSPGetVarValues(const QSP_CHAR *name, int ind, int *numVal, QSP_CHAR **strVal)
 jobject Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVarValues(JNIEnv * env, jobject this, jstring name, jint ind, jint defaultNumVal, jstring defaultStrVal)
 {
 	//Convert array name to QSP string
@@ -300,8 +296,7 @@ jobject Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVarValues(JNIEnv * env, 
     //Call QSP function
 	int numVal = (int)defaultNumVal;
     const char* tmpDefaultStrVal = (*env)->GetStringUTFChars(env, defaultStrVal, NULL);
-	//char * strVal;
-    QSP_CHAR* strVal = qspC2W(tmpDefaultStrVal);
+	QSP_CHAR* strVal = qspC2W(tmpDefaultStrVal);
     
 	QSP_BOOL result = QSPGetVarValues(strConverted, (int)ind, &numVal, &strVal);
 
@@ -558,3 +553,259 @@ jboolean Java_su_qsp_QuestNavigator_library_QspLib_QSPRestartGame(JNIEnv * env, 
 //{
 //	qspSetCallBack(type, func);
 //}
+
+/* -------------------------------------------------------------- */
+// Подвязываем нативные функции к классу QspLib, чтобы JVM не сканировал все библиотеки подряд. 
+// Это делать необязательно, но так будет работать чуть быстрее и не будет лишней ерунды в логе.
+
+jint JNI_OnLoad(JavaVM* vm, void* reserved)
+{
+    JNIEnv *env;
+    //__android_log_print(ANDROID_LOG_DEBUG, DEBUG_TAG, "JNI_OnLoad called");
+	if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6) != JNI_OK) {
+		//__android_log_print(ANDROID_LOG_DEBUG, DEBUG_TAG, "Failed to get the environment using GetEnv()");
+        return -1;
+    }
+    JNINativeMethod methods[] = {
+        {
+            "QSPInit",
+            "()V",
+            (void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPInit
+        },
+        {
+            "QSPDeInit",
+            "()V",
+            (void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPDeInit
+        },
+		{
+			"QSPIsInCallBack",
+			"()Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPIsInCallBack
+		},
+		{
+			"QSPEnableDebugMode",
+			"(Z)V",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPEnableDebugMode
+		},
+		/* STUB
+		{
+			"QSPGetCurStateData",
+			"()Ljava/lang/Object;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetCurStateData
+		},*/
+		{
+			"QSPGetVersion",
+			"()Ljava/lang/String;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVersion
+		},
+		{
+			"QSPGetFullRefreshCount",
+			"()I",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetFullRefreshCount
+		},
+		{
+			"QSPGetQstFullPath",
+			"()Ljava/lang/String;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetQstFullPath
+		},
+		{
+			"QSPGetCurLoc",
+			"()Ljava/lang/String;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetCurLoc
+		},
+		{
+			"QSPGetMainDesc",
+			"()Ljava/lang/String;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetMainDesc
+		},
+		{
+			"QSPIsMainDescChanged",
+			"()Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPIsMainDescChanged
+		},
+		{
+			"QSPGetVarsDesc",
+			"()Ljava/lang/String;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVarsDesc
+		},
+		{
+			"QSPIsVarsDescChanged",
+			"()Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPIsVarsDescChanged
+		},
+		/* STUB
+		{
+			"QSPGetExprValue",
+			"()Ljava/lang/Object;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetExprValue
+		},*/
+		{
+			"QSPSetInputStrText",
+			"(Ljava/lang/String;)V",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPSetInputStrText
+		},
+		{
+			"QSPGetActionsCount",
+			"()I",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetActionsCount
+		},
+		{
+			"QSPGetActionData",
+			"(I)Ljava/lang/Object;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetActionData
+		},
+		{
+			"QSPExecuteSelActionCode",
+			"(Z)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPExecuteSelActionCode
+		},
+		{
+			"QSPSetSelActionIndex",
+			"(IZ)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPSetSelActionIndex
+		},
+		{
+			"QSPGetSelActionIndex",
+			"()I",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetSelActionIndex
+		},
+		{
+			"QSPIsActionsChanged",
+			"()Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPIsActionsChanged
+		},
+		{
+			"QSPGetObjectsCount",
+			"()I",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetObjectsCount
+		},
+		{
+			"QSPGetObjectData",
+			"(I)Ljava/lang/Object;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetObjectData
+		},
+		{
+			"QSPSetSelObjectIndex",
+			"(IZ)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPSetSelObjectIndex
+		},
+		{
+			"QSPGetSelObjectIndex",
+			"()I",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetSelObjectIndex
+		},
+		{
+			"QSPIsObjectsChanged",
+			"()Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPIsObjectsChanged
+		},
+		{
+			"QSPShowWindow",
+			"(IZ)V",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPShowWindow
+		},
+		/* STUB
+		{
+			"QSPGetVarValuesCount",
+			"(Ljava/lang/String;)Ljava/lang/Object;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVarValuesCount
+		},*/
+		{
+			"QSPGetVarValues",
+			"(Ljava/lang/String;IILjava/lang/String;)Ljava/lang/Object;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVarValues
+		},
+		{
+			"QSPGetMaxVarsCount",
+			"()I",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetMaxVarsCount
+		},
+		/* STUB
+		{
+			"QSPGetVarNameByIndex",
+			"(I)Ljava/lang/Object;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetVarNameByIndex
+		},*/
+		{
+			"QSPExecString",
+			"(Ljava/lang/String;Z)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPExecString
+		},
+		{
+			"QSPExecLocationCode",
+			"(Ljava/lang/String;Z)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPExecLocationCode
+		},
+		{
+			"QSPExecCounter",
+			"(Z)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPExecCounter
+		},
+		{
+			"QSPExecUserInput",
+			"(Z)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPExecUserInput
+		},
+		{
+			"QSPGetLastErrorData",
+			"()Ljava/lang/Object;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetLastErrorData
+		},
+		{
+			"QSPGetErrorDesc",
+			"(I)Ljava/lang/String;",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPGetErrorDesc
+		},
+		{
+			"QSPLoadGameWorld",
+			"(Ljava/lang/String;)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPLoadGameWorld
+		},
+		{
+			"QSPLoadGameWorldFromData",
+			"([BILjava/lang/String;)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPLoadGameWorldFromData
+		},
+		{
+			"QSPSaveGame",
+			"(Ljava/lang/String;Z)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPSaveGame
+		},
+		{
+			"QSPSaveGameAsData",
+			"(Z)[B",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPSaveGameAsData
+		},
+		{
+			"QSPOpenSavedGame",
+			"(Ljava/lang/String;Z)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPOpenSavedGame
+		},
+		{
+			"QSPOpenSavedGameFromData",
+			"([BIZ)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPOpenSavedGameFromData
+		},
+		{
+			"QSPRestartGame",
+			"(Z)Z",
+			(void *) Java_su_qsp_QuestNavigator_library_QspLib_QSPRestartGame
+		}
+    };
+	int numMethods = sizeof(methods)/sizeof(methods[0]);
+	
+	
+    jclass clazz;
+
+    clazz = (*env)->FindClass(env, "su/qsp/QuestNavigator/library/QspLib");
+    if (clazz == NULL) {
+		//__android_log_print(ANDROID_LOG_DEBUG, DEBUG_TAG, "Native registration unable to find class");
+        return -1;
+    }
+    if ((*env)->RegisterNatives(env, clazz, methods, numMethods) < 0) {
+		//__android_log_print(ANDROID_LOG_DEBUG, DEBUG_TAG, "RegisterNatives failed");
+        return -1;
+    }
+
+    return JNI_VERSION_1_6;
+}

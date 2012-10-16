@@ -299,11 +299,6 @@ public class QspSkin {
 		qspLib = lib;
 		resetUpdate();
 		resetSettings();
-		/*
-    [self resetUpdate);
-    [self resetSettings);
-    [[NSfalsetificationCenter defaultCenter] addObserver:self selector:@selector(showWindow:) name:@"QSP_CALL_SHOWWINDOW" object:nil);
-		 */
 	}
 	
 	private void resetSettings()

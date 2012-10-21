@@ -91,6 +91,8 @@ public class QspLib extends Plugin {
         	saveSlotSelected(args, callbackId);
         } else if (action.equals("setMute")) {
         	setMute(args, callbackId);
+        } else if (action.equals("moveTaskToBackground")) {
+        	moveTaskToBackground(args, callbackId);
         } else {
         	return new PluginResult(PluginResult.Status.INVALID_ACTION);
         }
@@ -131,7 +133,70 @@ public class QspLib extends Plugin {
         }
 		return false;
 	}
-	
+
+    /**
+     * Called when the system is about to start resuming a previous activity. 
+     * 
+     * @param multitasking		Flag indicating if multitasking is turned on for app
+     */
+    public void onPause(boolean multitasking) {
+    	//Контекст UI
+    	Utility.WriteLog("onPause\\");
+    	
+    	if (gameIsRunning)
+    	{
+        	Utility.WriteLog("onPause: pausing game");    	
+    	    //Останавливаем таймер
+    	    timerHandler.removeCallbacks(timerUpdateTask);
+    	    
+    	    //Приостанавливаем музыку
+    	    PauseMusic(true);
+    	}
+    	
+    	Utility.WriteLog("onPause/");  
+    	super.onPause(multitasking);
+    }
+
+    /**
+     * Called when the activity will start interacting with the user. 
+     * 
+     * @param multitasking		Flag indicating if multitasking is turned on for app
+     */
+    public void onResume(boolean multitasking) {
+    	Utility.WriteLog("onResume\\");
+    	//Контекст UI
+    	super.onResume(multitasking);
+
+        if (gameIsRunning)
+    	{
+    		//Запускаем таймер
+            timerHandler.postDelayed(timerUpdateTask, timerInterval);
+
+            //Запускаем музыку
+    	    PauseMusic(false);
+    	}
+    	
+    	Utility.WriteLog("onResume/");    	
+    }
+
+    /**
+     * The final call you receive before your activity is destroyed. 
+     */
+    public void onDestroy() {
+    	//Контекст UI
+    	Utility.WriteLog("onDestroy\\");
+    	FreeResources();
+    	Utility.WriteLog("onDestroy/");  
+    	super.onDestroy();
+    }
+    
+    /****************************************************************************************************
+     ****************************************************************************************************
+     ****************************************************************************************************
+     ****************************************************************************************************
+     ****************************************************************************************************
+    */
+    
 	private void initLib(JSONArray args, String callbackId)
 	{
 		// Контекст UI
@@ -417,6 +482,15 @@ public class QspLib extends Plugin {
 	    }
 	}
 
+	private void moveTaskToBackground(JSONArray args, String callbackId)
+	{
+		// Контекст UI
+    	Utility.WriteLog("[[moveTaskToBackground]]");
+    	
+    	Utility.WriteLog("App closed by user! Going to background");
+    	mainActivity.moveTaskToBack(true);
+	}
+	
 	/*
 	 * 		Обертки яваскриптовых функций
 	 */
@@ -1003,9 +1077,8 @@ public class QspLib extends Plugin {
 
     	//Вызовется только при закрытии активити в обработчике onDestroy(завершение активити),
     	//но этого не произойдет при нормальной работе, т.к. кнопка Back не закрывает, а только
-    	//останавливает активити.
-    	
-    	// STUB!!! - Привязать процедуру на onDestroy!
+    	//останавливает активити. Произойдет, только если закончится доступная память и приложение
+    	//будет принудительно выгружено системой.
     	
     	//Очищаем ВСЕ на выходе
     	if (qspInited)
@@ -1478,11 +1551,6 @@ public class QspLib extends Plugin {
     
     private void PauseMusic(boolean pause)
     {
-    	// STUB
-    	
-    	// Реализовать обработчики событий PAUSE-RESUME для плагина,
-    	// в обработчиках вызывать эту функцию!
-    	
     	//Контекст UI
     	//pause == true : приостанавливаем
     	//pause == false : запускаем

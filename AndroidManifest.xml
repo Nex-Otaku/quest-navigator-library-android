@@ -23,7 +23,9 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name="su.qsp.QuestNavigator.library.ActivityMain"
-            android:label="@string/app_name" >
+            android:label="@string/app_name" 
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale"
+            android:alwaysRetainTaskState="true" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -950,6 +950,13 @@ public class QspLib extends Plugin {
 			e.printStackTrace();
 		}
     }
+    
+    private void ShowWindow(int type, int isShow)
+    {
+    	// Контекст библиотеки
+    	skin.showWindow(type, isShow);
+    }
+    
     //******************************************************************************
     //******************************************************************************
     //****** \ QSP  LIBRARY  REQUIRED  CALLBACKS / *********************************

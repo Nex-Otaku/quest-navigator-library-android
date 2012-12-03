@@ -10,7 +10,7 @@ JNIEnv* qspCallbackEnv;
 void Java_su_qsp_QuestNavigator_library_QspLib_QSPInit(JNIEnv * env, jobject this)
 {
 	//__android_log_print(ANDROID_LOG_DEBUG, DEBUG_TAG, "NDK:LC: [%s]", szLogThis);
-	qspCallbackObject = this;
+	qspCallbackObject = (*env)->NewGlobalRef(env, this);
 	qspCallbackEnv = env;
 	QSPInit();
 }
@@ -18,6 +18,7 @@ void Java_su_qsp_QuestNavigator_library_QspLib_QSPInit(JNIEnv * env, jobject thi
 void Java_su_qsp_QuestNavigator_library_QspLib_QSPDeInit(JNIEnv * env, jobject this)
 {
 	QSPDeInit();
+	(*env)->DeleteGlobalRef(env, qspCallbackObject);
 	qspCallbackObject = NULL;
 	qspCallbackEnv = NULL;
 }

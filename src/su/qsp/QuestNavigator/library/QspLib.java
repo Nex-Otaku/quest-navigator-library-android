@@ -35,11 +35,9 @@ public class QspLib extends Plugin {
 	
 	private Map<String, String> jsCallBacks = null;
 	private String initLevelCallbackId = null;
-	private boolean muted = false;
 	
-	private Context uiContext = null;
-	private Activity mainActivity = null;
-	private QspSkin skin = null;
+	private volatile Context uiContext = null;
+	private volatile Activity mainActivity = null;
 	
 	final private ReentrantLock musicLock = new ReentrantLock();
 	final private ReentrantLock callbackLock = new ReentrantLock();
@@ -224,7 +222,6 @@ public class QspLib extends Plugin {
 
 		gameIsRunning = false;
 		qspInited = false;
-		muted = false;
 		
 	    // Устанавливаем флаг, который означает, что мы ждем ответа от JS диалога(на данный момент - только диалог слотов сохранений)
 	    waitingForJS = false;
@@ -232,18 +229,12 @@ public class QspLib extends Plugin {
 		curGameFile = "www/standalone_content/game.qsp";
 		curSaveDir = mainActivity.getFilesDir().getPath().concat(File.separator);
 
-        //Создаем список для звуков и музыки
-        mediaPlayersList = new Vector<ContainerMusic>();
-        
         //Создаем список для всплывающего меню
         menuList = new Vector<ContainerMenuItem>();
 
         //Создаем объект для таймера
         timerHandler = new Handler(Looper.getMainLooper());
 
-        // Создаем скин
-        skin = new QspSkin(this);
-        
         //Запускаем поток библиотеки
         StartLibThread();
 	}
@@ -461,25 +452,33 @@ public class QspLib extends Plugin {
 		// Контекст UI
     	Utility.WriteLog("[[setMute]]");
     	
+    	boolean mutedLocal = false;
 		try {
-	    	muted = args.getBoolean(0); // true - выключаем звук, false - включаем
+	    	mutedLocal = args.getBoolean(0); // true - выключаем звук, false - включаем
 		} catch (JSONException e) {
     		Utility.WriteLog("ERROR - args in setMute!");
 			e.printStackTrace();
 			return;
 		}
     	
-        musicLock.lock();
-        try {
-	    	for (int i=0; i<mediaPlayersList.size(); i++)
-	    	{
-	    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
-				float realVolume = GetRealVolume(it.volume);
-				it.player.setVolume(realVolume, realVolume);
-	    	}
-	    } finally {
-	    	musicLock.unlock();
-	    }
+		final boolean toBeMuted = mutedLocal;
+
+		libThreadHandler.post(new Runnable() {
+			public void run() {
+		        musicLock.lock();
+		        try {
+		        	muted = toBeMuted;
+			    	for (int i=0; i<mediaPlayersList.size(); i++)
+			    	{
+			    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
+						float realVolume = GetRealVolume(it.volume);
+						it.player.setVolume(realVolume, realVolume);
+			    	}
+			    } finally {
+			    	musicLock.unlock();
+			    }
+			}
+		});
 	}
 
 	private void moveTaskToBackground(JSONArray args, String callbackId)
@@ -768,30 +767,146 @@ public class QspLib extends Plugin {
     private void PlayFile(String file, int volume)
     {
     	//Контекст библиотеки
-    	final String musicFile = Utility.QspPathTranslate(file);
-    	final int musicVolume = volume;
-    	mainActivity.runOnUiThread(new Runnable() {
-    		public void run() {
-    			PlayFileUI(musicFile, musicVolume);
-    		}
-    	});
+    	file = Utility.QspPathTranslate(file);
+    	
+    	if (file == null || file.length() == 0)
+    	{
+    		Utility.WriteLog("ERROR - filename is " + (file == null ? "null" : "empty"));
+    		return;
+    	}
+    	
+    	//Проверяем, проигрывается ли уже этот файл.
+    	//Если проигрывается, ничего не делаем.
+    	if (CheckPlayingFileSetVolume(file, true, volume))
+    		return;
+
+    	// Добавляем к имени файла полный путь
+    	String prefix = "";
+    	if (curGameDir != null)
+    		prefix = curGameDir;
+    	String assetFilePath = prefix.concat(file);
+
+    	//Проверяем, существует ли файл.
+		//Если нет, ничего не делаем.
+        if (!Utility.CheckAssetExists(uiContext, assetFilePath, "PlayFile"))
+        	return;
+
+    	AssetManager assetManager = uiContext.getAssets();
+    	if (assetManager == null)
+    	{
+    		Utility.WriteLog("PlayFile: failed, assetManager is null");
+    		return;
+    	}
+    	AssetFileDescriptor afd = null;
+    	try {
+			afd = assetManager.openFd(assetFilePath);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+    	if (afd == null)
+    		return;
+        
+    	MediaPlayer mediaPlayer = new MediaPlayer();
+	    try {
+			mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+			return;
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+			return;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+	    try {
+			mediaPlayer.prepare();
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+			return;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+		final String fileName = file;
+		mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+			@Override
+			public void onCompletion(MediaPlayer mp) {
+		        musicLock.lock();
+		        try {
+			    	for (int i=0; i<mediaPlayersList.size(); i++)
+			    	{
+			    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
+			    		if (it.path.equals(fileName))
+			    		{
+			    			it.player.release();
+			    			it.player = null;
+			    			mediaPlayersList.remove(it);
+			    			break;
+			    		}
+			    	}
+		        } finally {
+		        	musicLock.unlock();
+		        }
+			}
+		});
+		
+        musicLock.lock();
+        try {
+			float realVolume = GetRealVolume(volume);
+			mediaPlayer.setVolume(realVolume, realVolume);
+		    mediaPlayer.start();
+		    ContainerMusic ContainerMusic = new ContainerMusic();
+		    ContainerMusic.path = file;
+		    ContainerMusic.volume = volume;
+		    ContainerMusic.player = mediaPlayer;
+        	mediaPlayersList.add(ContainerMusic);
+        } finally {
+        	musicLock.unlock();
+        }
     }
     
     private boolean IsPlayingFile(String file)
     {
     	//Контекст библиотеки
-    	return IsPlayingFileUI(Utility.QspPathTranslate(file), false, 0);
+    	return CheckPlayingFileSetVolume(Utility.QspPathTranslate(file), false, 0);
     }
 
     private void CloseFile(String file)
     {
     	//Контекст библиотеки
-    	final String musicFile = Utility.QspPathTranslate(file);
-    	mainActivity.runOnUiThread(new Runnable() {
-    		public void run() {
-    			CloseFileUI(musicFile);
-    		}
-    	});
+    	file = Utility.QspPathTranslate(file);
+    	
+    	//Если вместо имени файла пришел null, значит закрываем все файлы(CLOSE ALL)
+    	boolean bCloseAll = false;
+    	if (file == null)
+    		bCloseAll = true;
+    	else if (file.length() == 0)
+    		return;
+        musicLock.lock();
+        try {
+	    	for (int i=0; i<mediaPlayersList.size(); i++)
+	    	{
+	    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
+	    		if (bCloseAll || it.path.equals(file))
+	    		{
+	    			if (it.player.isPlaying())
+	    				it.player.stop();
+	    			it.player.release();
+	    			it.player = null;
+	    			if (!bCloseAll)
+	    			{
+	    				mediaPlayersList.remove(it);
+	    				break;
+	    			}
+	    		}
+	    	}
+    		if (bCloseAll)
+    			mediaPlayersList.clear();
+        } finally {
+        	musicLock.unlock();
+        }
     }
     
     private void ShowPicture(String file)
@@ -1203,7 +1318,11 @@ public class QspLib extends Plugin {
     	    timerHandler.removeCallbacks(timerUpdateTask);
 
     	    //останавливаем музыку
-            CloseFileUI(null);
+            libThreadHandler.post(new Runnable() {
+        		public void run() {
+        			CloseFile(null);
+        		}
+            });
             
             gameIsRunning = false;
 		}
@@ -1300,9 +1419,6 @@ public class QspLib extends Plugin {
 		}
 		final int bufferSize = size;
 
-	    //Выключаем музыку
-	    CloseFileUI(null);
-	    
 		libThreadHandler.post(new Runnable() {
 			public void run() {
 	    		if (libraryThreadIsRunning)
@@ -1311,6 +1427,9 @@ public class QspLib extends Plugin {
 	    			return;
 	    		}
             	libraryThreadIsRunning = true;
+            	
+        	    //Выключаем музыку
+            	CloseFile(null);
             	
             	boolean result = QSPOpenSavedGameFromData(inputBuffer, bufferSize, true);
 				CheckQspResult(result, "LoadSlot: QSPOpenSavedGameFromData");
@@ -1387,105 +1506,9 @@ public class QspLib extends Plugin {
 		});
     }
     
-    private void PlayFileUI(String file, int volume)
-    {
-    	//Контекст UI
-    	if (file == null || file.length() == 0)
-    		return;
-    	
-    	//Проверяем, проигрывается ли уже этот файл.
-    	//Если проигрывается, ничего не делаем.
-    	if (IsPlayingFileUI(file, true, volume))
-    		return;
-
-    	// Добавляем к имени файла полный путь
-    	String prefix = "";
-    	if (curGameDir != null)
-    		prefix = curGameDir;
-    	String assetFilePath = prefix.concat(file);
-
-    	//Проверяем, существует ли файл.
-		//Если нет, ничего не делаем.
-        if (!Utility.CheckAssetExists(uiContext, assetFilePath, "PlayFileUI"))
-        	return;
-
-    	AssetManager assetManager = uiContext.getAssets();
-    	if (assetManager == null)
-    	{
-    		Utility.WriteLog("PlayFileUI: failed, assetManager is null");
-    		return;
-    	}
-    	AssetFileDescriptor afd = null;
-    	try {
-			afd = assetManager.openFd(assetFilePath);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return;
-		}
-    	if (afd == null)
-    		return;
-        
-    	MediaPlayer mediaPlayer = new MediaPlayer();
-	    try {
-			mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-			return;
-		} catch (IllegalStateException e) {
-			e.printStackTrace();
-			return;
-		} catch (IOException e) {
-			e.printStackTrace();
-			return;
-		}
-	    try {
-			mediaPlayer.prepare();
-		} catch (IllegalStateException e) {
-			e.printStackTrace();
-			return;
-		} catch (IOException e) {
-			e.printStackTrace();
-			return;
-		}
-		final String fileName = file;
-		mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-			@Override
-			public void onCompletion(MediaPlayer mp) {
-		        musicLock.lock();
-		        try {
-			    	for (int i=0; i<mediaPlayersList.size(); i++)
-			    	{
-			    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
-			    		if (it.path.equals(fileName))
-			    		{
-			    			mediaPlayersList.remove(it);
-			    			break;
-			    		}
-			    	}
-		        } finally {
-		        	musicLock.unlock();
-		        }
-			}
-		});
-		
-		float realVolume = GetRealVolume(volume);
-		mediaPlayer.setVolume(realVolume, realVolume);
-	    mediaPlayer.start();
-	    ContainerMusic ContainerMusic = new ContainerMusic();
-	    ContainerMusic.path = file;
-	    ContainerMusic.volume = volume;
-	    ContainerMusic.player = mediaPlayer;
-        musicLock.lock();
-        try {
-        	mediaPlayersList.add(ContainerMusic);
-        } finally {
-        	musicLock.unlock();
-        }
-    }
-    
     private float GetRealVolume(int volume)
     {
-    	// Контекст UI
+    	// Контекст библиотеки
     	float result = 0;
     	if (!muted)
     		result = ((float) volume) / 100;
@@ -1494,9 +1517,9 @@ public class QspLib extends Plugin {
     	return result;
     }
 
-    private boolean IsPlayingFileUI(String file, boolean setVolume, int volume)
+    private boolean CheckPlayingFileSetVolume(String file, boolean setVolume, int volume)
     {
-    	//Контекст UI
+    	//Контекст библиотеки
     	if (file == null || file.length() == 0)
     		return false;
     	boolean foundPlaying = false; 
@@ -1522,66 +1545,37 @@ public class QspLib extends Plugin {
         }
     	return foundPlaying;
     }
-    
-    private void CloseFileUI(String file)
-    {
-    	//Контекст UI
-    	//Если вместо имени файла пришел null, значит закрываем все файлы(CLOSE ALL)
-    	boolean bCloseAll = false;
-    	if (file == null)
-    		bCloseAll = true;
-    	else if (file.length() == 0)
-    		return;
-        musicLock.lock();
-        try {
-	    	for (int i=0; i<mediaPlayersList.size(); i++)
-	    	{
-	    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
-	    		if (bCloseAll || it.path.equals(file))
-	    		{
-	    			if (it.player.isPlaying())
-	    				it.player.stop();
-	    			it.player.release();
-	    			if (!bCloseAll)
-	    			{
-	    				mediaPlayersList.remove(it);
-	    				break;
-	    			}
-	    		}
-	    	}
-    		if (bCloseAll)
-    			mediaPlayersList.clear();
-        } finally {
-        	musicLock.unlock();
-        }
-    }
-    
+
     private void PauseMusic(boolean pause)
     {
     	//Контекст UI
     	//pause == true : приостанавливаем
     	//pause == false : запускаем
-        musicLock.lock();
-        try {
-	    	for (int i=0; i<mediaPlayersList.size(); i++)
-	    	{
-	    		
-	    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
-    			if (pause)
-    			{
-    				if (it.player.isPlaying())
-    					it.player.pause();
-    			}
-    			else
-    			{
-    				float realVolume = GetRealVolume(it.volume);
-    				it.player.setVolume(realVolume, realVolume);
-    				it.player.start();
-    			}
-	    	}
-	    } finally {
-	    	musicLock.unlock();
-	    }
+    	final boolean setPause = pause;
+        libThreadHandler.post(new Runnable() {
+    		public void run() {
+		        musicLock.lock();
+		        try {
+			    	for (int i=0; i<mediaPlayersList.size(); i++)
+			    	{
+			    		ContainerMusic it = mediaPlayersList.elementAt(i);    		
+		    			if (setPause)
+		    			{
+		    				if (it.player.isPlaying())
+		    					it.player.pause();
+		    			}
+		    			else
+		    			{
+		    				float realVolume = GetRealVolume(it.volume);
+		    				it.player.setVolume(realVolume, realVolume);
+		    				it.player.start();
+		    			}
+			    	}
+			    } finally {
+			    	musicLock.unlock();
+			    }
+    		}
+        });
     }
 	
 	/*
@@ -1660,6 +1654,9 @@ public class QspLib extends Plugin {
         	Utility.WriteLog("StartLibThread: failed, libThread is not null");    	
     		return;
     	}
+    	
+    	final QspLib pluginObject = this; 
+    	
     	//Запускаем поток библиотеки
     	Thread t = new Thread() {
             public void run() {
@@ -1667,10 +1664,22 @@ public class QspLib extends Plugin {
     			libThreadHandler = new Handler();
     			Utility.WriteLog("LibThread runnable: libThreadHandler is set");    	
 
-    			// Сообщаем яваскрипту, что библиотека запущена
-    			// и можно продолжить инициализацию
     	        libThreadHandler.post(new Runnable() {
     	    		public void run() {
+    	    	        // Создаем скин
+    	    	        skin = new QspSkin(pluginObject);
+
+    	    	        //Создаем список для звуков и музыки
+    			        musicLock.lock();
+    			        try {
+    			        	mediaPlayersList = new Vector<ContainerMusic>();
+    			        	muted = false;
+    			        } finally {
+    			        	musicLock.unlock();
+    			        }
+    	    	        
+    	    			// Сообщаем яваскрипту, что библиотека запущена
+    	    			// и можно продолжить инициализацию
     	        		mainActivity.runOnUiThread(new Runnable() {
     	        			public void run() {
     	    	            	jsInitNext();
@@ -1722,11 +1731,14 @@ public class QspLib extends Plugin {
     // мы ждем ответа от JS диалога(на данный момент - только диалог слотов сохранений)
     private boolean 		waitingForJS;
 
+    // Обработка музыки
+	private boolean 		muted = false;
+    private Vector<ContainerMusic>	mediaPlayersList;
     
-    String 					curGameDir;
+	private QspSkin 		skin = null;
+    volatile String			curGameDir;
     String					curGameFile;
     String					curSaveDir;
-    Vector<ContainerMusic>	mediaPlayersList;
     Handler					timerHandler;
 	long					timerStartTime;
 	long					gameStartTime;

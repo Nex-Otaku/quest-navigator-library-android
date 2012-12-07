@@ -14,7 +14,8 @@ import java.util.Vector;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.cordova.api.Plugin;
+import org.apache.cordova.api.CallbackContext;
+import org.apache.cordova.api.CordovaPlugin;
 import org.apache.cordova.api.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -31,7 +32,7 @@ import android.os.Looper;
 
 import su.qsp.QuestNavigator.library.Utility;
 
-public class QspLib extends Plugin {
+public class QspLib extends CordovaPlugin {
 	
 	private Map<String, String> jsCallBacks = null;
 	private String initLevelCallbackId = null;
@@ -51,50 +52,51 @@ public class QspLib extends Plugin {
     public static final int JSON_OBJECT = 2;
 
     public static final int SLOTS_MAX = 5;
-    
-	public PluginResult execute(String action, JSONArray args, String callbackId) {
-		// Контекст UI
-	    PluginResult.Status status = PluginResult.Status.OK;
-	    String result = "";
 
+    @Override
+    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+		// Контекст UI
         if (action.equals("initLib")) {
-        	initLib(args, callbackId);
+        	initLib(args, callbackContext.getCallbackId());
         	PluginResult emptyResult = new PluginResult(PluginResult.Status.NO_RESULT);
         	emptyResult.setKeepCallback(true);
-        	return emptyResult;
+        	callbackContext.sendPluginResult(emptyResult);
+        	return true;
         } else if (action.equals("registerJsCallback")) {
-        	registerJsCallback(args, callbackId);
+        	registerJsCallback(args, callbackContext.getCallbackId());
         	PluginResult emptyResult = new PluginResult(PluginResult.Status.NO_RESULT);
         	emptyResult.setKeepCallback(true);
-        	return emptyResult;
+        	callbackContext.sendPluginResult(emptyResult);
+        	return true;
         } else if (action.equals("restartGame")) {
-        	restartGame(args, callbackId);
+        	restartGame(args);
         } else if (action.equals("executeAction")) {
-        	executeAction(args, callbackId);
+        	executeAction(args);
         } else if (action.equals("selectObject")) {
-        	selectObject(args, callbackId);
+        	selectObject(args);
         } else if (action.equals("msgResult")) {
-        	msgResult(args, callbackId);
+        	msgResult(args);
         } else if (action.equals("inputResult")) {
-        	inputResult(args, callbackId);
+        	inputResult(args);
         } else if (action.equals("userMenuResult")) {
-        	userMenuResult(args, callbackId);
+        	userMenuResult(args);
         } else if (action.equals("errorResult")) {
-        	errorResult(args, callbackId);
+        	errorResult(args);
         } else if (action.equals("loadGame")) {
-        	loadGame(args, callbackId);
+        	loadGame(args);
         } else if (action.equals("saveGame")) {
-        	saveGame(args, callbackId);
+        	saveGame(args);
         } else if (action.equals("saveSlotSelected")) {
-        	saveSlotSelected(args, callbackId);
+        	saveSlotSelected(args);
         } else if (action.equals("setMute")) {
-        	setMute(args, callbackId);
+        	setMute(args);
         } else if (action.equals("moveTaskToBackground")) {
-        	moveTaskToBackground(args, callbackId);
+        	moveTaskToBackground(args);
         } else {
-        	return new PluginResult(PluginResult.Status.INVALID_ACTION);
+        	return false;
         }
-        return new PluginResult(status, result);
+        callbackContext.success();
+        return true;
 	}
 	
 	public boolean onOverrideUrlLoading(String url)
@@ -274,7 +276,7 @@ public class QspLib extends Plugin {
         }
 	}
 
-	private void restartGame(JSONArray args, String callbackId)
+	private void restartGame(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[restartGame]]");
@@ -284,7 +286,7 @@ public class QspLib extends Plugin {
     	runGame(gameFile);
 	}
 
-	private void executeAction(JSONArray args, String callbackId)
+	private void executeAction(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[executeAction]]");
@@ -313,7 +315,7 @@ public class QspLib extends Plugin {
 		});		
 	}
 
-	private void selectObject(JSONArray args, String callbackId)
+	private void selectObject(JSONArray args)
 	{
 		//STUB - нужно будет протестировать, код вроде рабочий
 		// Контекст UI
@@ -341,7 +343,7 @@ public class QspLib extends Plugin {
 		});		
 	}
 
-	private void msgResult(JSONArray args, String callbackId)
+	private void msgResult(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[msgResult]]");
@@ -350,7 +352,7 @@ public class QspLib extends Plugin {
     	setThreadUnpark();
 	}
 
-	private void inputResult(JSONArray args, String callbackId)
+	private void inputResult(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[inputResult]]");
@@ -367,7 +369,7 @@ public class QspLib extends Plugin {
     	setThreadUnpark();
 	}
 
-	private void userMenuResult(JSONArray args, String callbackId)
+	private void userMenuResult(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[userMenuResult]]");
@@ -386,7 +388,7 @@ public class QspLib extends Plugin {
        	setThreadUnpark();
 	}
 
-	private void errorResult(JSONArray args, String callbackId)
+	private void errorResult(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[errorResult]]");
@@ -395,7 +397,7 @@ public class QspLib extends Plugin {
     	setThreadUnpark();
 	}
 
-	private void loadGame(JSONArray args, String callbackId)
+	private void loadGame(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[loadGame]]");
@@ -406,7 +408,7 @@ public class QspLib extends Plugin {
     	jsShowSaveSlotsDialog(slots);
 	}
 
-	private void saveGame(JSONArray args, String callbackId)
+	private void saveGame(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[saveGame]]");
@@ -417,7 +419,7 @@ public class QspLib extends Plugin {
     	jsShowSaveSlotsDialog(slots);
 	}
 
-	private void saveSlotSelected(JSONArray args, String callbackId)
+	private void saveSlotSelected(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[saveSlotSelected]]");
@@ -447,7 +449,7 @@ public class QspLib extends Plugin {
         	SaveSlot(index);
 	}
 
-	private void setMute(JSONArray args, String callbackId)
+	private void setMute(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[setMute]]");
@@ -481,7 +483,7 @@ public class QspLib extends Plugin {
 		});
 	}
 
-	private void moveTaskToBackground(JSONArray args, String callbackId)
+	private void moveTaskToBackground(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[moveTaskToBackground]]");
@@ -507,7 +509,7 @@ public class QspLib extends Plugin {
     		Utility.WriteLog("ERROR - no valid callback ID for qspInitNext!");
     		return;
 		}
-		success(result, initLevelCallbackId);
+		webView.sendPluginResult(result, initLevelCallbackId);
 	}
 	
 	private void jsCallApi(String from, String to, Object obj, int cast)
@@ -537,7 +539,7 @@ public class QspLib extends Plugin {
     		Utility.WriteLog("ERROR - no valid callback ID for " + to + "!");
     		return;
 		}
-		success(result, callbackId);
+		webView.sendPluginResult(result, callbackId);
 	}
 	
 	private void jsSetGroupedContent(JSONObject content)

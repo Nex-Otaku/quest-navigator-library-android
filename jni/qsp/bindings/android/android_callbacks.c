@@ -139,12 +139,24 @@ void qspCallSystem(QSP_CHAR *cmd)
 {
 	/* Здесь выполняем системный вызов */
 	QSPCallState state;
-	if (qspCallBacks[QSP_CALL_SYSTEM])
-	{
-		qspSaveCallState(&state, QSP_FALSE, QSP_FALSE);
-		qspCallBacks[QSP_CALL_SYSTEM](cmd);
-		qspRestoreCallState(&state);
-	}
+	qspSaveCallState(&state, QSP_TRUE, QSP_FALSE);
+
+	jclass cls = (*qspCallbackEnv)->GetObjectClass(qspCallbackEnv, qspCallbackObject);
+	jmethodID mid =
+		 (*qspCallbackEnv)->GetMethodID(qspCallbackEnv, cls, "System", "(Ljava/lang/String;)V");
+	(*qspCallbackEnv)->DeleteLocalRef(qspCallbackEnv, cls);
+	if (mid == NULL)
+		return; /* method not found */
+
+	char * sz = qspW2C(cmd);
+	jstring jCmd = (*qspCallbackEnv)->NewStringUTF(qspCallbackEnv, sz);
+	if (sz!=NULL)
+		free(sz);
+
+	(*qspCallbackEnv)->CallVoidMethod(qspCallbackEnv, qspCallbackObject, mid, jCmd);
+	(*qspCallbackEnv)->DeleteLocalRef(qspCallbackEnv, jCmd);
+
+	qspRestoreCallState(&state);
 }
 
 void qspCallOpenGame(QSP_CHAR *file)

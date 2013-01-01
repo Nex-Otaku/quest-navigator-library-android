@@ -674,8 +674,18 @@ public class QspLib extends CordovaPlugin {
         {
             varsDesc = skin.applyHtmlFixes(QSPGetVarsDesc());
         }
+        
+        // Яваскрипт, переданный из игры командой EXEC('JS:...')
+        String jsCmd = null;
+        if (jsExecBuffer.length() > 0)
+        {
+        	jsCmd = jsExecBuffer;
+        	jsExecBuffer = "";
+        }
+        
         // Передаем собранные данные в яваскрипт
-        if ((jsSkin != null) || (mainDesc != null) || (acts != null) || (objs != null) || (varsDesc != null))
+        if ((jsSkin != null) || (mainDesc != null) || (acts != null) || (objs != null) || (varsDesc != null) ||
+        	(jsCmd != null))
         {
         	JSONObject groupedContent = new JSONObject();
         	try {
@@ -698,6 +708,10 @@ public class QspLib extends CordovaPlugin {
 	            if (objs != null)
 	            {
 	                groupedContent.put("objs", objs);
+	            }
+	            if (jsCmd != null)
+	            {
+	                groupedContent.put("js", jsCmd);
 	            }
 			} catch (JSONException e) {
 	    		Utility.WriteLog("ERROR - groupedContent in RefreshInt!");
@@ -1074,6 +1088,23 @@ public class QspLib extends CordovaPlugin {
     	skin.showWindow(type, isShow);
     }
     
+    private void System(String cmd)
+    {
+    	//Контекст библиотеки
+    	if (cmd == null)
+    		cmd = "";
+    	
+    	if (cmd.toUpperCase().startsWith("JS:"))
+    	{
+        	// Выполняем яваскрипт, переданный из игры командой EXEC('JS:...')
+    		final String jsCommand = cmd.substring("JS:".length());
+    		mainActivity.runOnUiThread(new Runnable() {
+    			public void run() {
+    				execJS(jsCommand);
+    			}
+    		});
+    	}
+    }
     //******************************************************************************
     //******************************************************************************
     //****** \ QSP  LIBRARY  REQUIRED  CALLBACKS / *********************************
@@ -1234,6 +1265,7 @@ public class QspLib extends CordovaPlugin {
     	
         final boolean inited = qspInited;
     	qspInited = true;
+    	jsExecBuffer = "";
     	final String gameFileName = fileName;
     	curGameFile = gameFileName;
         curGameDir = gameFileName.substring(0, gameFileName.lastIndexOf(File.separator, gameFileName.length() - 1) + 1);
@@ -1330,6 +1362,7 @@ public class QspLib extends CordovaPlugin {
 		}
 		curGameDir = "";
 		curGameFile = "";
+		jsExecBuffer = "";
 
 		//Очищаем библиотеку
 		if (restart || libraryThreadIsRunning)
@@ -1380,6 +1413,8 @@ public class QspLib extends CordovaPlugin {
     private void LoadSlot(int index)
     {
     	//Контекст UI
+    	jsExecBuffer = "";
+    	
     	String path = curSaveDir.concat(String.valueOf(index)).concat(".sav");
     	File f = new File(path);
     	if (!f.exists())
@@ -1579,6 +1614,14 @@ public class QspLib extends CordovaPlugin {
     		}
         });
     }
+    
+    private void execJS(String cmd)
+    {
+    	//Контекст UI
+    	// Сохраняем яваскрипт, переданный из игры командой EXEC('JS:...')
+    	// На выполнение отдаём при обновлении интерфейса
+    	jsExecBuffer = jsExecBuffer.concat(cmd);
+    }
 	
 	/*
 	 * *********************************************************************************
@@ -1748,6 +1791,7 @@ public class QspLib extends CordovaPlugin {
 	boolean					gameIsRunning;
 	boolean					qspInited;
 	Vector<ContainerMenuItem>		menuList;
+	String					jsExecBuffer;
     
     
     //control

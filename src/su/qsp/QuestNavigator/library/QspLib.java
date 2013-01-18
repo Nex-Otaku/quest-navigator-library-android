@@ -675,8 +675,17 @@ public class QspLib extends CordovaPlugin {
             varsDesc = skin.applyHtmlFixes(QSPGetVarsDesc());
         }
         
+        // Яваскрипт, переданный из игры командой EXEC('JS:...')
+        String jsCmd = null;
+        if (jsExecBuffer.length() > 0)
+        {
+        	jsCmd = jsExecBuffer;
+        	jsExecBuffer = "";
+        }
+        
         // Передаем собранные данные в яваскрипт
-        if ((jsSkin != null) || (mainDesc != null) || (acts != null) || (objs != null) || (varsDesc != null))
+        if ((jsSkin != null) || (mainDesc != null) || (acts != null) || (objs != null) || (varsDesc != null) ||
+        	(jsCmd != null))
         {
         	JSONObject groupedContent = new JSONObject();
         	try {
@@ -700,13 +709,9 @@ public class QspLib extends CordovaPlugin {
 	            {
 	                groupedContent.put("objs", objs);
 	            }
-
-	            // Яваскрипт, переданный из игры командой EXEC('JS:...')
-	            // Выполняем только если что-то изменилось в интерфейсе
-	            if (jsExecBuffer.length() > 0)
+	            if (jsCmd != null)
 	            {
-	                groupedContent.put("js", jsExecBuffer);
-	            	jsExecBuffer = "";
+	                groupedContent.put("js", jsCmd);
 	            }
 			} catch (JSONException e) {
 	    		Utility.WriteLog("ERROR - groupedContent in RefreshInt!");

@@ -996,6 +996,27 @@ public class QspLib extends CordovaPlugin {
     	return inputboxResult;
     }
     
+    /**
+     * Функция запросов к плееру.
+     * С помощью этой функции мы можем в игре узнать параметры окружения плеера.
+     * Вызывается так: $platform = GETPLAYER('platform')
+     * @param resource
+     * @return
+     */
+    private String PlayerInfo(String resource)
+    {
+    	//Контекст библиотеки
+    	resource = resource.toLowerCase();
+    	if (resource.equals("platform")) {
+    		return "Android";
+    	} else if (resource.equals("player")) {
+    		return "Quest Navigator";
+    	} else if (resource.equals("player.version")) {
+    		return "1.0.0";
+    	}
+    	return "";
+    }
+    
     private int GetMSCount()
     {
     	//Контекст библиотеки

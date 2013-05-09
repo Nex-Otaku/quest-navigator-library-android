@@ -449,4 +449,37 @@ QSP_CHAR *qspCallInputBox(QSP_CHAR *text)
 	return buffer;
 }
 
+QSP_CHAR *qspCallPlayerInfo(QSP_CHAR *text)
+{
+	/* Здесь запрашиваем параметры плеера */
+	QSPCallState state;
+	QSP_CHAR *buffer;
+
+	qspSaveCallState(&state, QSP_TRUE, QSP_FALSE);
+
+	char * sz = qspW2C(text);
+	jstring jText = (*qspCallbackEnv)->NewStringUTF(qspCallbackEnv, sz);
+	if (sz!=NULL)
+		free(sz);
+
+	jclass cls = (*qspCallbackEnv)->GetObjectClass(qspCallbackEnv, qspCallbackObject);
+	jmethodID mid = (*qspCallbackEnv)->GetMethodID(qspCallbackEnv, cls, "PlayerInfo", "(Ljava/lang/String;)Ljava/lang/String;");
+	(*qspCallbackEnv)->DeleteLocalRef( qspCallbackEnv, cls );
+	if (mid != NULL)
+	{
+		jstring jResult = (jstring)((*qspCallbackEnv)->CallObjectMethod(qspCallbackEnv, qspCallbackObject, mid, jText));
+		const char *str = (*qspCallbackEnv)->GetStringUTFChars(qspCallbackEnv, jResult, NULL);
+		if (str != NULL)
+			buffer = qspC2W(str);
+		else
+			qspGetNewText(QSP_FMT(""), 0);
+		(*qspCallbackEnv)->ReleaseStringUTFChars(qspCallbackEnv, jResult, str);
+	}
+	else
+		buffer = qspGetNewText(QSP_FMT(""), 0);
+	(*qspCallbackEnv)->DeleteLocalRef( qspCallbackEnv, jText );
+	qspRestoreCallState(&state);
+	return buffer;
+}
+
 #endif

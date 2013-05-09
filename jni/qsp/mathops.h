@@ -114,6 +114,7 @@
 		qspOpMainText,
 		qspOpStatText,
 		qspOpCurActs,
+		qspOpPlayerInfo,
 
 		qspOpLast_Operation
 	};

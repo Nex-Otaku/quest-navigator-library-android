@@ -195,6 +195,7 @@ void qspInitMath()
 	qspAddOperation(qspOpMainText, 30, 0, 1, 0, 0);
 	qspAddOperation(qspOpStatText, 30, 0, 1, 0, 0);
 	qspAddOperation(qspOpCurActs, 30, 0, 1, 0, 0);
+	qspAddOperation(qspOpPlayerInfo, 30, 0, 1, 1, 1, 1);
 	/* Names */
 	qspAddOpName(qspOpCloseBracket, QSP_RRBRACK, 1);
 	qspAddOpName(qspOpAdd, QSP_ADD, 1);
@@ -281,6 +282,8 @@ void qspInitMath()
 	qspAddOpName(qspOpStatText, QSP_STRCHAR QSP_FMT("STATTXT"), 1);
 	qspAddOpName(qspOpCurActs, QSP_FMT("CURACTS"), 1);
 	qspAddOpName(qspOpCurActs, QSP_STRCHAR QSP_FMT("CURACTS"), 1);
+	qspAddOpName(qspOpPlayerInfo, QSP_FMT("GETPLAYER"), 1);
+	qspAddOpName(qspOpPlayerInfo, QSP_STRCHAR QSP_FMT("GETPLAYER"), 1);
 	for (i = 0; i < QSP_OPSLEVELS; ++i)
 		qsort(qspOpsNames[i], qspOpsNamesCounts[i], sizeof(QSPMathOpName), qspMathOpsCompare);
 }
@@ -595,6 +598,9 @@ static QSPVariant qspValue(int itemsCount, QSPVariant *compValues, int *compOpCo
 				break;
 			case qspOpCurActs:
 				QSP_STR(tos) = qspGetAllActionsAsCode();
+				break;
+			case qspOpPlayerInfo:
+				QSP_STR(tos) = qspCallPlayerInfo(QSP_STR(args[0]));
 				break;
 			/* External functions -------------------------------------------------------------- */
 			default:

@@ -61,5 +61,6 @@
 	void qspCallCloseFile(QSP_CHAR *);
 	void qspCallDeleteMenu();
 	QSP_CHAR *qspCallInputBox(QSP_CHAR *);
+	QSP_CHAR *qspCallPlayerInfo(QSP_CHAR *);
 
 #endif

@@ -287,4 +287,24 @@ QSP_CHAR *qspCallInputBox(QSP_CHAR *text)
 	return buffer;
 }
 
+QSP_CHAR *qspCallPlayerInfo(QSP_CHAR *text)
+{
+	/* «десь получаем строку по заданному параметру */
+	QSPCallState state;
+	QSP_CHAR *buffer;
+	int maxLen = 511;
+	if (qspCallBacks[QSP_CALL_PLAYERINFO])
+	{
+		qspSaveCallState(&state, QSP_TRUE, QSP_FALSE);
+		buffer = (QSP_CHAR *)malloc((maxLen + 1) * sizeof(QSP_CHAR));
+		*buffer = 0;
+		qspCallBacks[QSP_CALL_PLAYERINFO](text, buffer, maxLen);
+		buffer[maxLen] = 0;
+		qspRestoreCallState(&state);
+	}
+	else
+		buffer = qspGetNewText(QSP_FMT(""), 0);
+	return buffer; 
+}
+
 #endif

@@ -7,7 +7,7 @@ import android.view.WindowManager;
 
 import org.apache.cordova.*;
 
-public class ActivityMain extends DroidGap {
+public class ActivityMain extends CordovaActivity {
 
     public static final int SLOTS_MAX = 5;
 	

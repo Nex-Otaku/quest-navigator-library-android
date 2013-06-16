@@ -225,9 +225,6 @@ public class QspLib extends CordovaPlugin {
 		gameIsRunning = false;
 		qspInited = false;
 		
-	    // Устанавливаем флаг, который означает, что мы ждем ответа от JS диалога(на данный момент - только диалог слотов сохранений)
-	    waitingForJS = false;
-		
 		curGameFile = "www/standalone_content/game.qsp";
 		curSaveDir = mainActivity.getFilesDir().getPath().concat(File.separator);
 
@@ -423,7 +420,6 @@ public class QspLib extends CordovaPlugin {
 	{
 		// Контекст UI
     	Utility.WriteLog("[[saveSlotSelected]]");
-        waitingForJS = false;
 
         int index = -1;
         int mode = -1;
@@ -1794,9 +1790,6 @@ public class QspLib extends CordovaPlugin {
     int						menuResult;
     AlertDialog				inputboxDialog;
     
-    // мы ждем ответа от JS диалога(на данный момент - только диалог слотов сохранений)
-    private boolean 		waitingForJS;
-
     // Обработка музыки
 	private boolean 		muted = false;
     private Vector<ContainerMusic>	mediaPlayersList;

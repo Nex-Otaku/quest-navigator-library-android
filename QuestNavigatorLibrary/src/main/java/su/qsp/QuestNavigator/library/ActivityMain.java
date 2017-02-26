@@ -18,9 +18,7 @@ public class ActivityMain extends CordovaActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
 
-        super.setIntegerProperty("splashscreen", R.drawable.splash);
-        
-        super.loadUrl("file:///android_asset/www/standalone_content/gamePG-android.html", 60000);
+        super.loadUrl(launchUrl);
     }
 
     @Override

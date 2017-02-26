@@ -1,5 +1,5 @@
-#include <qsp/qsp.h>
-#include <qsp/bindings/android/android.h>
+#include "qsp/qsp.h"
+#include "qsp/bindings/android/android.h"
 #include <jni.h>
 #include <string.h>
 #include <android/log.h>

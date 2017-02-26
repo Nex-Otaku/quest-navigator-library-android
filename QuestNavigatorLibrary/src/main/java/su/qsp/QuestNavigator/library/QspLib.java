@@ -14,9 +14,9 @@ import java.util.Vector;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.cordova.api.CallbackContext;
-import org.apache.cordova.api.CordovaPlugin;
-import org.apache.cordova.api.PluginResult;
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,19 +30,17 @@ import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.Looper;
 
-import su.qsp.QuestNavigator.library.Utility;
-
 public class QspLib extends CordovaPlugin {
 	
-	private Map<String, String> jsCallBacks = null;
-	private String initLevelCallbackId = null;
+	protected Map<String, String> jsCallBacks = null;
+	protected String initLevelCallbackId = null;
 	
-	private volatile Context uiContext = null;
-	private volatile Activity mainActivity = null;
+	protected volatile Context uiContext = null;
+	protected volatile Activity mainActivity = null;
 	
-	final private ReentrantLock musicLock = new ReentrantLock();
-	final private ReentrantLock callbackLock = new ReentrantLock();
-	final private ReentrantLock initLock = new ReentrantLock();
+	final protected ReentrantLock musicLock = new ReentrantLock();
+	final protected ReentrantLock callbackLock = new ReentrantLock();
+	final protected ReentrantLock initLock = new ReentrantLock();
 	
 	final static public int QSP_TRUE = 1; 
 	final static public int QSP_FALSE = 0; 
@@ -197,7 +195,7 @@ public class QspLib extends CordovaPlugin {
      ****************************************************************************************************
     */
     
-	private void initLib(JSONArray args, String callbackId)
+	protected void initLib(JSONArray args, String callbackId)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[initLib]]");
@@ -238,7 +236,7 @@ public class QspLib extends CordovaPlugin {
         StartLibThread();
 	}
 
-	private void registerJsCallback(JSONArray args, String callbackId)
+	protected void registerJsCallback(JSONArray args, String callbackId)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[registerJsCallback]]");
@@ -273,7 +271,7 @@ public class QspLib extends CordovaPlugin {
         }
 	}
 
-	private void restartGame(JSONArray args)
+	protected void restartGame(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[restartGame]]");
@@ -283,7 +281,7 @@ public class QspLib extends CordovaPlugin {
     	runGame(gameFile);
 	}
 
-	private void executeAction(JSONArray args)
+	protected void executeAction(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[executeAction]]");
@@ -312,7 +310,7 @@ public class QspLib extends CordovaPlugin {
 		});		
 	}
 
-	private void selectObject(JSONArray args)
+	protected void selectObject(JSONArray args)
 	{
 		//STUB - нужно будет протестировать, код вроде рабочий
 		// Контекст UI
@@ -340,7 +338,7 @@ public class QspLib extends CordovaPlugin {
 		});		
 	}
 
-	private void msgResult(JSONArray args)
+	protected void msgResult(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[msgResult]]");
@@ -349,7 +347,7 @@ public class QspLib extends CordovaPlugin {
     	setThreadUnpark();
 	}
 
-	private void inputResult(JSONArray args)
+	protected void inputResult(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[inputResult]]");
@@ -366,7 +364,7 @@ public class QspLib extends CordovaPlugin {
     	setThreadUnpark();
 	}
 
-	private void userMenuResult(JSONArray args)
+	protected void userMenuResult(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[userMenuResult]]");
@@ -385,7 +383,7 @@ public class QspLib extends CordovaPlugin {
        	setThreadUnpark();
 	}
 
-	private void errorResult(JSONArray args)
+	protected void errorResult(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[errorResult]]");
@@ -394,7 +392,7 @@ public class QspLib extends CordovaPlugin {
     	setThreadUnpark();
 	}
 
-	private void loadGame(JSONArray args)
+	protected void loadGame(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[loadGame]]");
@@ -405,7 +403,7 @@ public class QspLib extends CordovaPlugin {
     	jsShowSaveSlotsDialog(slots);
 	}
 
-	private void saveGame(JSONArray args)
+	protected void saveGame(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[saveGame]]");
@@ -416,7 +414,7 @@ public class QspLib extends CordovaPlugin {
     	jsShowSaveSlotsDialog(slots);
 	}
 
-	private void saveSlotSelected(JSONArray args)
+	protected void saveSlotSelected(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[saveSlotSelected]]");
@@ -445,7 +443,7 @@ public class QspLib extends CordovaPlugin {
         	SaveSlot(index);
 	}
 
-	private void setMute(JSONArray args)
+	protected void setMute(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[setMute]]");
@@ -479,7 +477,7 @@ public class QspLib extends CordovaPlugin {
 		});
 	}
 
-	private void moveTaskToBackground(JSONArray args)
+	protected void moveTaskToBackground(JSONArray args)
 	{
 		// Контекст UI
     	Utility.WriteLog("[[moveTaskToBackground]]");
@@ -492,7 +490,7 @@ public class QspLib extends CordovaPlugin {
 	 * 		Обертки яваскриптовых функций
 	 */
 	
-	private void jsInitNext()
+	protected void jsInitNext()
 	{
 		// Контекст UI
 		// Продвигаемся на шаг дальше по инициализации плагина
@@ -508,7 +506,7 @@ public class QspLib extends CordovaPlugin {
 		webView.sendPluginResult(result, initLevelCallbackId);
 	}
 	
-	private void jsCallApi(String from, String to, Object obj, int cast)
+	protected void jsCallApi(String from, String to, Object obj, int cast)
 	{
 		// Контекст UI
 		// Все функции вызываются одинаково, 
@@ -538,49 +536,49 @@ public class QspLib extends CordovaPlugin {
 		webView.sendPluginResult(result, callbackId);
 	}
 	
-	private void jsSetGroupedContent(JSONObject content)
+	protected void jsSetGroupedContent(JSONObject content)
 	{
 		// Контекст UI
 		jsCallApi("jsSetGroupedContent", "qspSetGroupedContent", content, JSON_OBJECT);
     }
 
-	private void jsQspMsg(String msg)
+	protected void jsQspMsg(String msg)
 	{
 		// Контекст UI
 		jsCallApi("jsQspMsg", "qspMsg", msg, JSON_STRING);
     }
 
-	private void jsQspView(String path)
+	protected void jsQspView(String path)
 	{
 		// Контекст UI
 		jsCallApi("jsQspView", "qspView", path, JSON_STRING);
     }
 
-	private void jsQspInput(String text)
+	protected void jsQspInput(String text)
 	{
 		// Контекст UI
 		jsCallApi("jsQspInput", "qspInput", text, JSON_STRING);
     }
 
-	private void jsQspMenu(JSONArray menu)
+	protected void jsQspMenu(JSONArray menu)
 	{
 		// Контекст UI
 		jsCallApi("jsQspMenu", "qspMenu", menu, JSON_ARRAY);
     }
 
-	private void jsQspError(JSONObject error)
+	protected void jsQspError(JSONObject error)
 	{
 		// Контекст UI
 		jsCallApi("jsQspError", "qspError", error, JSON_OBJECT);
     }
 
-	private void jsShowSaveSlotsDialog(JSONObject slots)
+	protected void jsShowSaveSlotsDialog(JSONObject slots)
 	{
 		// Контекст UI
 		jsCallApi("jsShowSaveSlotsDialog", "qspShowSaveSlotsDialog", slots, JSON_OBJECT);
     }
 	
-	private String getCallbackId(String name)
+	protected String getCallbackId(String name)
 	{
 		// Небольшая вспомогательная функция, 
 		// чтобы не загромождать код "локами" 
@@ -599,7 +597,7 @@ public class QspLib extends CordovaPlugin {
     //****** / QSP  LIBRARY  REQUIRED  CALLBACKS \ *********************************
     //******************************************************************************
     //******************************************************************************
-    private void RefreshInt(int isRedraw) 
+    protected void RefreshInt(int isRedraw) 
     {
     	//Контекст библиотеки
         boolean needUpdate = skin.isSomethingChanged();
@@ -723,7 +721,7 @@ public class QspLib extends CordovaPlugin {
         skin.resetUpdate();
     }
     
-    private void SetTimer(int msecs)
+    protected void SetTimer(int msecs)
     {
     	//Контекст библиотеки
     	final int timeMsecs = msecs;
@@ -734,7 +732,7 @@ public class QspLib extends CordovaPlugin {
 		});
     }
 
-    private void ShowMessage(String message)
+    protected void ShowMessage(String message)
     {
     	//Контекст библиотеки
 		if (libThread==null)
@@ -776,7 +774,7 @@ public class QspLib extends CordovaPlugin {
 		Utility.WriteLog("ShowMessage: library thread unparked, finishing");
     }
     
-    private void PlayFile(String file, int volume)
+    protected void PlayFile(String file, int volume)
     {
     	//Контекст библиотеки
     	file = Utility.QspPathTranslate(file);
@@ -879,13 +877,13 @@ public class QspLib extends CordovaPlugin {
         }
     }
     
-    private boolean IsPlayingFile(String file)
+    protected boolean IsPlayingFile(String file)
     {
     	//Контекст библиотеки
     	return CheckPlayingFileSetVolume(Utility.QspPathTranslate(file), false, 0);
     }
 
-    private void CloseFile(String file)
+    protected void CloseFile(String file)
     {
     	//Контекст библиотеки
     	file = Utility.QspPathTranslate(file);
@@ -921,7 +919,7 @@ public class QspLib extends CordovaPlugin {
         }
     }
     
-    private void ShowPicture(String file)
+    protected void ShowPicture(String file)
     {
     	//Контекст библиотеки
     	if (file == null)
@@ -948,7 +946,7 @@ public class QspLib extends CordovaPlugin {
 		});    	    	
     }
     
-    private String InputBox(String prompt)
+    protected String InputBox(String prompt)
     {
     	//Контекст библиотеки
 		if (libThread==null)
@@ -999,7 +997,7 @@ public class QspLib extends CordovaPlugin {
      * @param resource
      * @return
      */
-    private String PlayerInfo(String resource)
+    protected String PlayerInfo(String resource)
     {
     	//Контекст библиотеки
     	resource = resource.toLowerCase();
@@ -1013,13 +1011,13 @@ public class QspLib extends CordovaPlugin {
     	return "";
     }
     
-    private int GetMSCount()
+    protected int GetMSCount()
     {
     	//Контекст библиотеки
     	return (int) (System.currentTimeMillis() - gameStartTime);
     }
     
-    private void AddMenuItem(String name, String imgPath)
+    protected void AddMenuItem(String name, String imgPath)
     {
     	//Контекст библиотеки
     	ContainerMenuItem item = new ContainerMenuItem();
@@ -1028,7 +1026,7 @@ public class QspLib extends CordovaPlugin {
     	menuList.add(item);
     }
     
-    private int ShowMenu()
+    protected int ShowMenu()
     {
     	//Контекст библиотеки
 		if (libThread==null)
@@ -1082,13 +1080,13 @@ public class QspLib extends CordovaPlugin {
 		return menuResult;
     }
     
-    private void DeleteMenu()
+    protected void DeleteMenu()
     {
     	//Контекст библиотеки
     	menuList.clear();
     }
     
-    private void Wait(int msecs)
+    protected void Wait(int msecs)
     {
     	//Контекст библиотеки
     	try {
@@ -1099,13 +1097,13 @@ public class QspLib extends CordovaPlugin {
 		}
     }
     
-    private void ShowWindow(int type, int isShow)
+    protected void ShowWindow(int type, int isShow)
     {
     	// Контекст библиотеки
     	skin.showWindow(type, isShow);
     }
     
-    private void System(String cmd)
+    protected void System(String cmd)
     {
     	//Контекст библиотеки
     	if (cmd == null)
@@ -1145,7 +1143,7 @@ public class QspLib extends CordovaPlugin {
 	 * *********************************************************************************
 	 */
 
-	private Runnable timerUpdateTask = new Runnable() {
+	protected Runnable timerUpdateTask = new Runnable() {
     	//Контекст UI
 		public void run() {
 			libThreadHandler.post(new Runnable() {
@@ -1164,7 +1162,7 @@ public class QspLib extends CordovaPlugin {
 		}
 	};
     
-	private void CheckQspResult(boolean successfull, String failMsg)
+	protected void CheckQspResult(boolean successfull, String failMsg)
 	{
     	//Контекст библиотеки
     	if (!successfull)
@@ -1240,7 +1238,7 @@ public class QspLib extends CordovaPlugin {
 	 * *********************************************************************************
 	 */
 
-    private void FreeResources()
+    protected void FreeResources()
     {
     	//Контекст UI
     	
@@ -1262,7 +1260,7 @@ public class QspLib extends CordovaPlugin {
    		StopLibThread();
     }
     
-	private void runGame(String fileName)
+	protected void runGame(String fileName)
     {
     	//Контекст UI
 		if (!Utility.CheckAssetExists(uiContext, fileName, "runGame"))
@@ -1360,7 +1358,7 @@ public class QspLib extends CordovaPlugin {
     	});
     }
     
-    private void StopGame(boolean restart)
+    protected void StopGame(boolean restart)
     {
     	//Контекст UI
 		if (gameIsRunning)
@@ -1395,7 +1393,7 @@ public class QspLib extends CordovaPlugin {
         });
     }
     
-    private JSONObject getSaveSlots(boolean open)
+    protected JSONObject getSaveSlots(boolean open)
     {
     	//Контекст UI
     	JSONArray jsSlots = new JSONArray();
@@ -1427,7 +1425,7 @@ public class QspLib extends CordovaPlugin {
     	return jsSlotsContainer;
     }
     
-    private void LoadSlot(int index)
+    protected void LoadSlot(int index)
     {
     	//Контекст UI
     	jsExecBuffer = "";
@@ -1506,7 +1504,7 @@ public class QspLib extends CordovaPlugin {
 		});
     }
     
-    private void SaveSlot(int index)
+    protected void SaveSlot(int index)
     {
     	//Контекст UI
     	final String path = curSaveDir.concat(String.valueOf(index)).concat(".sav");
@@ -1560,7 +1558,7 @@ public class QspLib extends CordovaPlugin {
 		});
     }
     
-    private float GetRealVolume(int volume)
+    protected float GetRealVolume(int volume)
     {
     	// Контекст библиотеки
     	float result = 0;
@@ -1571,7 +1569,7 @@ public class QspLib extends CordovaPlugin {
     	return result;
     }
 
-    private boolean CheckPlayingFileSetVolume(String file, boolean setVolume, int volume)
+    protected boolean CheckPlayingFileSetVolume(String file, boolean setVolume, int volume)
     {
     	//Контекст библиотеки
     	if (file == null || file.length() == 0)
@@ -1600,7 +1598,7 @@ public class QspLib extends CordovaPlugin {
     	return foundPlaying;
     }
 
-    private void PauseMusic(boolean pause)
+    protected void PauseMusic(boolean pause)
     {
     	//Контекст UI
     	//pause == true : приостанавливаем
@@ -1632,7 +1630,7 @@ public class QspLib extends CordovaPlugin {
         });
     }
     
-    private void execJS(String cmd)
+    protected void execJS(String cmd)
     {
     	//Контекст UI
     	// Сохраняем яваскрипт, переданный из игры командой EXEC('JS:...')
@@ -1659,7 +1657,7 @@ public class QspLib extends CordovaPlugin {
 
     // Утилиты
 
-    private String unescapeHtml(String text)
+    protected String unescapeHtml(String text)
     {
     	if (text == null)
     		return "";
@@ -1775,26 +1773,26 @@ public class QspLib extends CordovaPlugin {
     //******************************************************************************
 
     //Хэндлер для потока библиотеки
-    private Handler libThreadHandler;
+    protected Handler libThreadHandler;
     
     //Поток библиотеки
-    private Thread libThread;
-    private Thread parkThread;
+    protected Thread libThread;
+    protected Thread parkThread;
     
     //Запущен ли поток библиотеки
     boolean					libraryThreadIsRunning = false;
  
     //Есть ответ от MessageBox, InputBox либо Menu
-    private boolean 		dialogHasResult;
+    protected boolean 		dialogHasResult;
     String					inputboxResult;
     int						menuResult;
     AlertDialog				inputboxDialog;
     
     // Обработка музыки
-	private boolean 		muted = false;
-    private Vector<ContainerMusic>	mediaPlayersList;
+	protected boolean 		muted = false;
+    protected Vector<ContainerMusic>	mediaPlayersList;
     
-	private QspSkin 		skin = null;
+	protected QspSkin 		skin = null;
     volatile String			curGameDir;
     String					curGameFile;
     String					curSaveDir;
